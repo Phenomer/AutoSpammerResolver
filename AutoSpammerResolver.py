@@ -92,8 +92,8 @@ resolved = False
 if len(sys.argv) == 2 and sys.argv[1] == "resolved":
     resolved = True
 
-# 直近10件の未解決レポートを取得する。
-for report in auto_resolver.get_reports(limit=10, resolved=resolved):
+# 直近50件の未解決レポートを取得する。
+for report in auto_resolver.get_reports(limit=50, resolved=resolved):
     print("-" * 10)
     print(f"ReportID: {report['id']}")
     print(f"Category: {report['category']}")
