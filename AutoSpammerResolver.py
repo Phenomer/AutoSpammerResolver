@@ -3,9 +3,7 @@
 import requests
 from requests import Response
 import json
-import sys
-
-config = json.loads(open("config.json", "r").read())
+from argparse import ArgumentParser
 
 
 class AutoSpammerResolver:
@@ -66,6 +64,30 @@ class AutoSpammerResolver:
             return res.json()
 
 
+config = json.loads(open("config.json", "r").read())
+parser = ArgumentParser()
+subcmd = parser.add_mutually_exclusive_group()
+subcmd.add_argument(
+    "--execute",
+    action="store_true",
+    default=False,
+    help="報告されたターゲットを実際に始末する。",
+)
+subcmd.add_argument(
+    "--resolved",
+    action="store_true",
+    default=False,
+    help="解決済みレポートの一覧を見る。",
+)
+parser.add_argument(
+    "--limit",
+    dest="limit",
+    default=50,
+    help="一度に処理するレポート数。デフォルトは50件。",
+)
+
+options = parser.parse_args()
+
 auto_resolver = AutoSpammerResolver(
     don_url=config["DonURL"], access_token=config["AccessToken"]
 )
@@ -85,15 +107,16 @@ def target_check(report: dict) -> bool:
     # 自身のサーバ以外から(外部サーバから)のレポートである場合は自動処理しない
     if report["account"]["domain"] is not None:
         return False
+
+    # 自身のサーバ内のユーザーがターゲットとなっている場合は自動処理しない
+    if report["target_account"]["domain"] is None:
+        return False
+
     return True
 
 
-resolved = False
-if len(sys.argv) == 2 and sys.argv[1] == "resolved":
-    resolved = True
-
 # 直近50件の未解決レポートを取得する。
-for report in auto_resolver.get_reports(limit=50, resolved=resolved):
+for report in auto_resolver.get_reports(limit=options.limit, resolved=options.resolved):
     print("-" * 10)
     print(f"ReportID: {report['id']}")
     print(f"Category: {report['category']}")
@@ -112,7 +135,7 @@ for report in auto_resolver.get_reports(limit=50, resolved=resolved):
         print("Skipped.")
         continue
     # 対象アカウントをサスペンドする。
-    if len(sys.argv) == 2 and sys.argv[1] == "execute":
+    if options.execute:
         auto_resolver.suspend(
             target_id=report["target_account"]["id"], report_id=report["id"]
         )

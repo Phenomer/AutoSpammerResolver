@@ -33,7 +33,7 @@ config.jsonの**AccessToken**に記述してください。
 
 ### 未解決の報告を確認する
 実行すると、下記のように対象者の情報が表示されます。
-デフォルトでは最新50件分を処理します。
+デフォルトでは最新50件分を処理します。この制限は`--limit 10`のように変更できます(最大200件)。
 
 ```sh
 % python3 AutoSpammerResolver.py
@@ -52,9 +52,9 @@ Suspended: False
 ```
 
 ### 始末する
-実際に始末する際は、`execute`オプションを付けて実行してください。
+実際に始末する際は、`--execute`オプションを付けて実行してください。
 ```sh
-% python3 AutoSpammerResolver.py execute
+% python3 AutoSpammerResolver.py --execute
 ReportID: 1341
 Category: spam
 ActionTaken: True
@@ -75,10 +75,10 @@ Executed.
 
 ### 解決済みのレポートを確認する
 
-既に解決済みのレポートを確認したい時は、`resolved`オプションを付けて実行してください。
+既に解決済みのレポートを確認したい時は、`--resolved`オプションを付けて実行してください。
 
 ```sh
-% python3 AutoSpammerResolver.py resolved
+% python3 AutoSpammerResolver.py --resolved
 ReportID: 1341
 Category: spam
 ActionTaken: True
@@ -96,6 +96,7 @@ Suspended: True
 `target_check`メソッドを変更すると、対象を絞り込んだりできます。
 デフォルトでは、下記の条件を全て満たしたもののみ自動で処理します。
 
-- 報告者は自インスタンスのもののみ(スパム報告スパム対策)
+- 報告者は自インスタンスのもののみ
+- 対象者は自インスタンス外のもののみ
 - 対象ユーザー名は10文字のもの
 - spamとして報告されたもの
