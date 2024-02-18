@@ -117,6 +117,8 @@ def target_check(report: dict) -> bool:
 
 # 直近50件の未解決レポートを取得する。
 for report in auto_resolver.get_reports(limit=options.limit, resolved=options.resolved):
+    reporter_account = f"{report['account']['username']}@{report['account']['domain']}"
+    target_account = f"{report['target_account']['username']}@{report['target_account']['domain']}"
     print("-" * 10)
     print(f"ReportID: {report['id']}")
     print(f"Category: {report['category']}")
@@ -126,14 +128,17 @@ for report in auto_resolver.get_reports(limit=options.limit, resolved=options.re
     print(f"Forwarded: {report['forwarded']}")
     print(f"CreatedAt: {report['created_at']}")
     print(f"UpdatedAt: {report['updated_at']}")
-    print(f"Reporter: {report['account']['username']}@{report['account']['domain']}")
+    print(f"Reporter: {reporter_account}")
     print(
-        f"Target: {report['target_account']['username']}@{report['target_account']['domain']} ({report['target_account']['id']})"
+        f"Target: {target_account} ({report['target_account']['id']})"
     )
+    print(f"TargetDomain: {report['target_account']['domain']}")
     print(f"Suspended: {report['target_account']['suspended']}\n")
     if not target_check(report):
-        print("Skipped.")
+        print(f"Skipped - Target: {target_account}, Reporter: {reporter_account}")
         continue
+    print(f"Targetted - Target: {target_account}, Reporter: {reporter_account}")
+
     # 対象アカウントをサスペンドする。
     if options.execute:
         auto_resolver.suspend(
@@ -141,4 +146,4 @@ for report in auto_resolver.get_reports(limit=options.limit, resolved=options.re
         )
         # suspend処理の際にreport_idを付けとくと、別途resolveしなくてもいいらしい
         # auto_resolver.resolve_report(report_id=report['id'])
-        print("Executed.")
+        print(f"Executed - Target: {target_account}, Reporter: {reporter_account}")
