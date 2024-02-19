@@ -1,15 +1,17 @@
 # AutoSpammerResolver
 
 ## これはなに?
-Mastodonでユーザーにより報告されたspamを、問答無用で始末(サスペンド)するスクリプトです。
+Mastodonでユーザーにより報告されたspamを、問答無用で始末(サスペンド)するスクリプトと、
+リモート公開ストリームに流れてくるスパムを自動的にレポートして始末(サスペンド)するスクリプトです。
 利用には下記の権限が必要です。
 
-- admin:read:reports
-- admin:write:accounts
-- admin:write:reports
+- admin:read:reports 提出されたレポートの参照
+- admin:write:accounts サスペンド処理
+- admin:write:reports レポートの更新
+- read:statuses 公開リモートタイムラインの参照
+- write:reports レポートの提出
 
-
-## つかいかた
+## AutoSpammerResolverのつかいかた
 「開発」 -> 新規アプリから、アプリを作成してください。
 
 - アプリの名前: てきとうに名前を付ける
@@ -19,9 +21,11 @@ Mastodonでユーザーにより報告されたspamを、問答無用で始末(�
   - admin:read:reports
   - admin:write:accounts
   - admin:write:reports
+  - read:statuses
+  - write:reports
 
 作成できたら、生成された**アクセストークン**を、
-config.jsonの**AccessToken**に記述してください。
+`config.json`の**AccessToken**に記述してください。
 また、DonURLを自身が管理しているMastodonサーバのURLにしてください。
 
 ```json
@@ -92,11 +96,10 @@ Target: target_user@target_domain (111947772733136565)
 Suspended: True
 ```
 
-## カスタマイズ
+### カスタマイズ
 `target_check`メソッドを変更すると、対象を絞り込んだりできます。
-デフォルトでは、下記の条件を全て満たしたもののみ自動で処理します。
 
-- 報告者は自インスタンスのもののみ
-- 対象者は自インスタンス外のもののみ
-- 対象ユーザー名は10文字のもの
-- spamとして報告されたもの
+
+## Mabosstiffのつかいかた
+`AutoSpammerResolver`と同様に`config.json`を作成し、`Mabosstiff.py`を実行するだけです。
+サスペンドされたアカウントと投稿に関する情報は、blacklistディレクトリ以下にJSON形式で記録されます。

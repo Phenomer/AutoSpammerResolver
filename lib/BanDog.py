@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import json
-import time
 from urllib.parse import urlparse
 from websockets.sync.client import connect
 from datetime import datetime
