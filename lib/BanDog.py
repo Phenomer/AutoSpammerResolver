@@ -23,12 +23,12 @@ class BanDog(SpammerResolver):
         return datetime.now().strftime("%y%m%d_%H%M%S_%f")
 
     def save_blacklist(self, payload):
-        with open(f"blacklist/{self.time_str()}.json", "a") as log:
-            log.write(json.dumps(payload, indent=4, ensure_ascii=False))
+        with open(f"log/blacklist/{self.time_str()}.json", "a") as log_file:
+            log_file.write(json.dumps(payload, indent=4, ensure_ascii=False))
 
     def save_whitelist(self, payload):
-        with open(f"whitelist/{self.time_str()}.json", "a") as log:
-            log.write(json.dumps(payload, indent=4, ensure_ascii=False))
+        with open(f"log/whitelist/{self.time_str()}.json", "a") as log_file:
+            log_file.write(json.dumps(payload, indent=4, ensure_ascii=False))
 
     def spam_check(self, payload):
         if not self.is_spam(payload):
@@ -46,10 +46,9 @@ class BanDog(SpammerResolver):
             "header": payload["account"]["header"],
             "created_at": payload["account"]["created_at"],
         }
-        print(json.dumps(account_info, indent=4, ensure_ascii=False))
-        print(json.dumps(payload["mentions"], indent=4, ensure_ascii=False))
-        print(payload["content"])
-        print()
+        self.logger.info(json.dumps(account_info, indent=4, ensure_ascii=False))
+        self.logger.info(json.dumps(payload["mentions"], indent=4, ensure_ascii=False))
+        self.logger.info(payload["content"])
 
         # スパムレポートを提出
         report = self.write_spam_report(
@@ -64,7 +63,7 @@ class BanDog(SpammerResolver):
             f"wss://{don_host}/api/v1/streaming/?stream=public:remote",
             additional_headers=self.authentication_header(),
         ) as ws:
-            print("connected.")
+            self.logger.info("connected.")
             while True:
                 data = json.loads(ws.recv())
                 if data["event"] != "update":

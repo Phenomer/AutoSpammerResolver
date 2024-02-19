@@ -1,4 +1,5 @@
 import requests
+import logging
 from datetime import datetime, timezone
 from requests import Response
 
@@ -10,6 +11,7 @@ class SpammerResolver:
     def __init__(self, don_url: str, access_token: str):
         self.don_url = don_url
         self.access_token = access_token
+        self.logger = logging.getLogger(__name__)
 
     def response_validator(self, res: Response) -> bool:
         if res.status_code == 200:
