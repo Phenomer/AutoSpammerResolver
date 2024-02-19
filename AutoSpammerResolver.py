@@ -1,67 +1,8 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import requests
-from requests import Response
 import json
 from argparse import ArgumentParser
-
-
-class AutoSpammerResolver:
-    class ProtocolError(Exception):
-        pass
-
-    def __init__(self, don_url: str, access_token: str):
-        self.don_url = don_url
-        self.access_token = access_token
-
-    def response_validator(self, res: Response) -> bool:
-        if res.status_code == 200:
-            return True
-        else:
-            raise AutoSpammerResolver.ProtocolError(
-                "{} {} - {}".format(res.status_code, res.reason, res.request.url)
-            )
-
-    def authentication_header(self):
-        return {"Authorization": f"Bearer {self.access_token}"}
-
-    # レポート一覧取得: https://docs.joinmastodon.org/methods/admin/reports/#get
-    # デフォルトでは未解決のもののみ返す。
-    # resolved=Trueで解決済みのものを返す。
-    def get_reports(self, limit: int = 5, resolved: bool = False) -> dict:
-        uri = f"{self.don_url}/api/v1/admin/reports"
-        params = {"limit": str(limit)}
-        if resolved:
-            params["resolved"] = "1"
-        res = requests.get(
-            uri,
-            headers=self.authentication_header(),
-            params=params,
-        )
-        if self.response_validator(res):
-            return res.json()
-
-    # サスペンド: https://docs.joinmastodon.org/methods/admin/accounts/#action
-    def suspend(self, target_id: str, report_id: str) -> dict:
-        uri = f"{self.don_url}/api/v1/admin/accounts/{target_id}/action"
-        res = requests.post(
-            uri,
-            headers=self.authentication_header(),
-            data={"type": "suspend", "report_id": report_id},
-        )
-        if self.response_validator(res):
-            return res.json()
-
-    # レポート解決: https://docs.joinmastodon.org/methods/admin/reports/#resolve
-    # サスペンド時にreport_idを付与しておけば自動的に解決されるので、
-    # 通常は個別に処理する必要はない。
-    def resolve_report(self, report_id: str) -> dict:
-        uri = f"{self.don_url}/api/v1/admin/reports/{report_id}/resolve"
-        res = requests.post(
-            uri, headers=self.authentication_header(), data={"report_id": report_id}
-        )
-        if self.response_validator(res):
-            return res.json()
+from lib.SpammerResolver import SpammerResolver
 
 
 config = json.loads(open("config.json", "r").read())
@@ -85,12 +26,15 @@ parser.add_argument(
     default=50,
     help="一度に処理するレポート数。デフォルトは50件。",
 )
+parser.add_argument(
+    "--max_id",
+    dest="max_id",
+    default=None,
+    help="このIDより前に作成されたレポートを参照する。",
+)
 
 options = parser.parse_args()
-
-auto_resolver = AutoSpammerResolver(
-    don_url=config["DonURL"], access_token=config["AccessToken"]
-)
+resolver = SpammerResolver(don_url=config["DonURL"], access_token=config["AccessToken"])
 
 
 # 始末するターゲットであればTrue、始末しなくてもよければFalseを返す。
@@ -112,13 +56,21 @@ def target_check(report: dict) -> bool:
     if report["target_account"]["domain"] is None:
         return False
 
+    # 以前に作られたアカウントの場合は自動処理しない
+    if not resolver.after_x_day(report["target_account"]["created_at"]):
+        return False
+
     return True
 
 
 # 直近50件の未解決レポートを取得する。
-for report in auto_resolver.get_reports(limit=options.limit, resolved=options.resolved):
+for report in resolver.get_reports(
+    limit=options.limit, resolved=options.resolved, max_id=options.max_id
+):
     reporter_account = f"{report['account']['username']}@{report['account']['domain']}"
-    target_account = f"{report['target_account']['username']}@{report['target_account']['domain']}"
+    target_account = (
+        f"{report['target_account']['username']}@{report['target_account']['domain']}"
+    )
     print("-" * 10)
     print(f"ReportID: {report['id']}")
     print(f"Category: {report['category']}")
@@ -129,9 +81,7 @@ for report in auto_resolver.get_reports(limit=options.limit, resolved=options.re
     print(f"CreatedAt: {report['created_at']}")
     print(f"UpdatedAt: {report['updated_at']}")
     print(f"Reporter: {reporter_account}")
-    print(
-        f"Target: {target_account} ({report['target_account']['id']})"
-    )
+    print(f"Target: {target_account} ({report['target_account']['id']})")
     print(f"TargetDomain: {report['target_account']['domain']}")
     print(f"Suspended: {report['target_account']['suspended']}\n")
     if not target_check(report):
@@ -141,7 +91,7 @@ for report in auto_resolver.get_reports(limit=options.limit, resolved=options.re
 
     # 対象アカウントをサスペンドする。
     if options.execute:
-        auto_resolver.suspend(
+        resolver.suspend(
             target_id=report["target_account"]["id"], report_id=report["id"]
         )
         # suspend処理の際にreport_idを付けとくと、別途resolveしなくてもいいらしい
